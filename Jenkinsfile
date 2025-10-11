@@ -116,12 +116,10 @@ pipeline {
                 script {
                     echo "Poussage du package vers Nexus Raw Repository..."
                     
-                    // Utiliser withCredentials pour la connexion Nexus
-                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                    // Utiliser le credential configuré dans Jenkins (pas de mot de passe dans le code)
+                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         sh """
-                            curl -v -u \${NEXUS_USERNAME}:\${NEXUS_PASSWORD} \\
-                            --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
-                            ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
+                            curl -v -u \${USERNAME}:\${PASSWORD}  --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                         """
                     }
                     
@@ -137,7 +135,7 @@ pipeline {
                     
                     // Construire l'image Docker avec le tag
                     sh """
-                        docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:latest .
+                        docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} .
                     """
                     
                     echo "Image Docker construite: ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
@@ -150,17 +148,17 @@ pipeline {
                 script {
                     echo "Poussage de l'image Docker vers Nexus..."
                     
-                    // Utiliser withCredentials pour la connexion Docker Nexus
-                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
-                        // Login à Nexus Docker Registry (avec configuration insecure si nécessaire)
-                        sh "echo \${NEXUS_PASSWORD} | docker login 34.239.182.154:8081 -u \${NEXUS_USERNAME} --password-stdin"
-                        
-                        // Tag l'image pour Nexus (format: registry/repository/image:tag)
-                        sh "docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
-                        
-                        // Pousser vers Nexus
-                        sh "docker push 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
-                        
+                    // Utiliser le credential configuré dans Jenkins (pas de mot de passe dans le code)
+                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh """
+                            echo \${PASSWORD} | docker login 34.239.182.154:8081 -u \${USERNAME} --password-stdin
+                            
+                            docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                            
+                            docker push 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                            
+                            docker logout 34.239.182.154:8081
+                        """
                     }
                     
                     echo "Image Docker poussée vers Nexus: ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
@@ -173,7 +171,6 @@ pipeline {
         always {
             // Nettoyage des images Docker locales pour économiser l'espace
             sh "docker rmi ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} || true"
-            sh "docker rmi ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} || true"
         }
     }
 }
