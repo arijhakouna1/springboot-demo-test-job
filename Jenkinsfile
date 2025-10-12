@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         NEXUS_DOCKER_REPO = 'http://34.239.182.154:8081/repository/hub.aceternity'
-        NEXUS_RAW_REPO = 'http://34.239.182.154:8081/repository/raw.acertenity'
+        NEXUS_RAW_REPO = 'http://34.239.182.154:8081/repository/raw.aceternity'
         ARTIFACT_NAME = 'springboot-demo'
         DOCKER_IMAGE_NAME = 'springboot-demo'
     }
@@ -125,7 +125,7 @@ pipeline {
                                 curl -v -u \${USERNAME}:\${PASSWORD} \\
                                 --fail \\
                                 --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
-                                ${NEXUS_RAW_REPO}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
+                                ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                             """,
                             returnStatus: true
                         )
@@ -133,7 +133,7 @@ pipeline {
                         if (nexusResult != 0) {
                             error "ÉCHEC: Push vers Nexus Raw Repository a échoué!"
                         } else {
-                            echo " SUCCÈS: Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${env.CURRENT_TAG}/"
+                            echo " SUCCÈS: Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/"
                         }
                     }
                 }
