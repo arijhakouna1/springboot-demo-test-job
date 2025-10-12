@@ -169,7 +169,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         def dockerPushResult = sh(
                             script: """
-                                echo \${PASSWORD} | docker login 34.239.182.154:8081 -u \${USERNAME} --password-stdin
+                                docker login 34.239.182.154:8081 -u ${USERNAME} -p ${PASSWORD}
                                 
                                 docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
                                 
