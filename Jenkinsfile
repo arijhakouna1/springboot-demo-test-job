@@ -2,8 +2,8 @@ pipeline {
     agent any
     
     environment {
-        NEXUS_DOCKER_REPO = 'https://34.239.182.154:8081/repository/hub.aceternity'
-        NEXUS_RAW_REPO = 'https://34.239.182.154:8081/repository/raw.aceternity'
+        NEXUS_DOCKER_REPO = 'http://34.239.182.154/nexus/repository/hub.aceternity'
+        NEXUS_RAW_REPO = 'http://34.239.182.154/nexus/repository/raw.aceternity'
         ARTIFACT_NAME = 'springboot-demo'
         DOCKER_IMAGE_NAME = 'springboot-demo'
     }
