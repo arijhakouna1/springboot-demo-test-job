@@ -170,11 +170,14 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         def dockerPushResult = sh(
                             script: """
-                                # Configure Docker to use HTTP with Nexus (bypass HTTPS issues)
+                                # Configure Docker to use HTTPS with custom certificate
                                 export DOCKER_CONFIG=/tmp/docker-config
                                 mkdir -p \${DOCKER_CONFIG}
                                 
-                                # Login to Nexus with HTTP (bypass HTTPS)
+                                # Copy certificate to Docker config
+                                cp /etc/ssl/certs/ec2.crt \${DOCKER_CONFIG}/ca.crt
+                                
+                                # Login to Nexus with HTTPS
                                 echo \${PASSWORD} | docker login 34.239.182.154/nexus -u \${USERNAME} --password-stdin
                                 
                                 # Tag the image for Nexus
