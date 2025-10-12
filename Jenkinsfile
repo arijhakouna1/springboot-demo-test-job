@@ -120,12 +120,21 @@ pipeline {
                     echo "Poussage du package vers Nexus Raw Repository..."
                     
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh """
-                            curl -v -u \${USERNAME}:\${PASSWORD}  --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
-                        """
+                        def nexusResult = sh(
+                            script: """
+                                curl -v -u \${USERNAME}:\${PASSWORD} \\
+                                --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
+                                ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
+                            """,
+                            returnStatus: true
+                        )
+                        
+                        if (nexusResult != 0) {
+                            error "ÉCHEC: Push vers Nexus Raw Repository a échoué!"
+                        } else {
+                            echo " SUCCÈS: Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/"
+                        }
                     }
-                    
-                    echo "Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/"
                 }
             }
         }
@@ -135,12 +144,18 @@ pipeline {
                 script {
                     echo "Construction de l'image Docker..."
                     
-                    // Construire l'image Docker avec le tag
-                    sh """
-                        docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} .
-                    """
+                    def dockerResult = sh(
+                        script: """
+                            docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} .
+                        """,
+                        returnStatus: true
+                    )
                     
-                    echo "Image Docker construite: ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
+                    if (dockerResult != 0) {
+                        error "ÉCHEC: Construction de l'image Docker a échoué"
+                    } else {
+                        echo "SUCCÈS: Image Docker construite: ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
+                    }
                 }
             }
         }
@@ -150,20 +165,26 @@ pipeline {
                 script {
                     echo "Poussage de l'image Docker vers Nexus..."
                     
-                    // Utiliser le credential configuré dans Jenkins (pas de mot de passe dans le code)
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh """
-                            echo \${PASSWORD} | docker login 34.239.182.154:8081 -u \${USERNAME} --password-stdin
-                            
-                            docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
-                            
-                            docker push 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
-                            
-                            docker logout 34.239.182.154:8081
-                        """
+                        def dockerPushResult = sh(
+                            script: """
+                                echo \${PASSWORD} | docker login 34.239.182.154:8081 -u \${USERNAME} --password-stdin
+                                
+                                docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                
+                                docker push 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                
+                                docker logout 34.239.182.154:8081
+                            """,
+                            returnStatus: true
+                        )
+                        
+                        if (dockerPushResult != 0) {
+                            error "ÉCHEC: Push de l'image Docker vers Nexus a échoué! Vérifiez que le repository 'hub.aceternity' existe dans Nexus."
+                        } else {
+                            echo "SUCCÈS: Image Docker poussée vers Nexus: ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
+                        }
                     }
-                    
-                    echo "Image Docker poussée vers Nexus: ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
                 }
             }
         }
