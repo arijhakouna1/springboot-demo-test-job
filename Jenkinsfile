@@ -87,7 +87,11 @@ pipeline {
         stage('Build Application') {
             steps {
                 echo "Build de l'application avec Maven..."
-                sh "./mvnw package -DskipTests"
+                script {
+                    // Modifier temporairement la version dans le pom.xml pour utiliser le tag
+                    sh "sed -i 's/<version>0.0.1-SNAPSHOT<\\/version>/<version>${env.CURRENT_TAG}<\\/version>/' pom.xml"
+                    sh "./mvnw package -DskipTests"
+                }
             }
         }
         
@@ -98,7 +102,7 @@ pipeline {
                     sh "mkdir -p target/packaging"
                     
                     // Copier le JAR dans le répertoire de packaging
-                    sh "cp target/${ARTIFACT_NAME}-*.jar target/packaging/"
+                    sh "cp target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.jar target/packaging/"
                     
                     // Créer l'archive ZIP
                     sh "cd target/packaging && zip -r ../${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ."
