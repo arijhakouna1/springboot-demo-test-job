@@ -123,6 +123,7 @@ pipeline {
                         def nexusResult = sh(
                             script: """
                                 curl -v -u \${USERNAME}:\${PASSWORD} \\
+                                --fail \\
                                 --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
                                 ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                             """,
