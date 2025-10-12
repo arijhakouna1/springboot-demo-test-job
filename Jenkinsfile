@@ -125,7 +125,7 @@ pipeline {
                                 curl -v -u \${USERNAME}:\${PASSWORD} \\
                                 --fail \\
                                 --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
-                                ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
+                                ${NEXUS_RAW_REPO}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                             """,
                             returnStatus: true
                         )
@@ -133,7 +133,7 @@ pipeline {
                         if (nexusResult != 0) {
                             error "ÉCHEC: Push vers Nexus Raw Repository a échoué!"
                         } else {
-                            echo " SUCCÈS: Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/"
+                            echo " SUCCÈS: Package poussé vers Nexus: ${NEXUS_RAW_REPO}/${env.CURRENT_TAG}/"
                         }
                     }
                 }
@@ -181,7 +181,7 @@ pipeline {
                         )
                         
                         if (dockerPushResult != 0) {
-                            error "ÉCHEC: Push de l'image Docker vers Nexus a échoué! Vérifiez que le repository 'hub.aceternity' existe dans Nexus."
+                            error "ÉCHEC: Push de l'image Docker vers Nexus a échoué "
                         } else {
                             echo "SUCCÈS: Image Docker poussée vers Nexus: ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
                         }
