@@ -120,8 +120,7 @@ pipeline {
                 script {
                     echo "Poussage du package vers Nexus Raw Repository..."
                     
-                    // Utiliser le credential configuré dans Jenkins (pas de mot de passe dans le code)
-                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials')]) {
                         sh """
                             curl -v -u \${USERNAME}:\${PASSWORD}  --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                         """
