@@ -122,7 +122,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         def nexusResult = sh(
                             script: """
-                                curl -v -u \${USERNAME}:\${PASSWORD} \\
+                                curl -v -k -u \${USERNAME}:\${PASSWORD} \\
                                 --fail \\
                                 --location \\
                                 --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip \\
@@ -170,13 +170,21 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         def dockerPushResult = sh(
                             script: """
-                                docker login 34.239.182.154:8081 -u ${USERNAME} -p ${PASSWORD}
+                                # Configure Docker to use HTTP with Nexus (bypass HTTPS issues)
+                                export DOCKER_CONFIG=/tmp/docker-config
+                                mkdir -p \${DOCKER_CONFIG}
                                 
-                                docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                # Login to Nexus with HTTP (bypass HTTPS)
+                                echo \${PASSWORD} | docker login 34.239.182.154/nexus -u \${USERNAME} --password-stdin
                                 
-                                docker push 34.239.182.154:8081/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                # Tag the image for Nexus
+                                docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154/nexus/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
                                 
-                                docker logout 34.239.182.154:8081
+                                # Push to Nexus
+                                docker push 34.239.182.154/nexus/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                
+                                # Logout
+                                docker logout 34.239.182.154/nexus
                             """,
                             returnStatus: true
                         )
