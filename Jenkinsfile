@@ -80,6 +80,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 echo "Exécution des tests unitaires avec Maven..."
+                sh "sed -i 's/<version>0.0.1-SNAPSHOT<\\/version>/<version>${env.CURRENT_TAG}<\\/version>/' pom.xml"
                 sh "./mvnw clean test"
             }
         }
@@ -88,8 +89,6 @@ pipeline {
             steps {
                 echo "Build de l'application avec Maven..."
                 script {
-                    // Modifier temporairement la version dans le pom.xml pour utiliser le tag
-                    sh "sed -i 's/<version>0.0.1-SNAPSHOT<\\/version>/<version>${env.CURRENT_TAG}<\\/version>/' pom.xml"
                     sh "./mvnw package -DskipTests"
                 }
             }
@@ -120,7 +119,7 @@ pipeline {
                 script {
                     echo "Poussage du package vers Nexus Raw Repository..."
                     
-                    withCredentials([usernamePassword(credentialsId: 'nexus_creds')]) {
+                    withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         sh """
                             curl -v -u \${USERNAME}:\${PASSWORD}  --upload-file target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ${NEXUS_RAW_REPO}/${ARTIFACT_NAME}/${env.CURRENT_TAG}/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip
                         """
@@ -152,7 +151,7 @@ pipeline {
                     echo "Poussage de l'image Docker vers Nexus..."
                     
                     // Utiliser le credential configuré dans Jenkins (pas de mot de passe dans le code)
-                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         sh """
                             echo \${PASSWORD} | docker login 34.239.182.154:8081 -u \${USERNAME} --password-stdin
                             
