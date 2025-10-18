@@ -165,35 +165,28 @@ pipeline {
         stage('Push Docker Image to Nexus') {
             steps {
                 script {
-                    echo "Poussage de l'image Docker vers Nexus..."
+                    echo "Poussage de l'image Docker vers Nexus ..."
                     
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                         def dockerPushResult = sh(
                             script: """
-                                # Configure Docker to use HTTPS with custom certificate
-                                export DOCKER_CONFIG=/tmp/docker-config
-                                mkdir -p \${DOCKER_CONFIG}
-                                
-                                # Copy certificate to Docker config
-                                cp /etc/ssl/certs/ec2.crt \${DOCKER_CONFIG}/ca.crt
-                                
-                                # Login to Nexus with HTTPS
-                                echo \${PASSWORD} | docker login 34.239.182.154/nexus -u \${USERNAME} --password-stdin
+                                # Login to Nexus with HTTPS (sécurisé)
+                                echo \${PASSWORD} | docker login 34.239.182.154/nexus/repository/hub.aceternity -u \${USERNAME} --password-stdin
                                 
                                 # Tag the image for Nexus
-                                docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154/nexus/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                docker tag ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} 34.239.182.154/nexus/repository/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
                                 
                                 # Push to Nexus
-                                docker push 34.239.182.154/nexus/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
+                                docker push 34.239.182.154/nexus/repository/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}
                                 
                                 # Logout
-                                docker logout 34.239.182.154/nexus
+                                docker logout 34.239.182.154/nexus/repository/hub.aceternity
                             """,
                             returnStatus: true
                         )
                         
                         if (dockerPushResult != 0) {
-                            error "ÉCHEC: Push de l'image Docker vers Nexus a échoué "
+                            error "ÉCHEC: Push de l'image Docker vers Nexus a échoué"
                         } else {
                             echo "SUCCÈS: Image Docker poussée vers Nexus: ${NEXUS_DOCKER_REPO}/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
                         }
@@ -201,12 +194,15 @@ pipeline {
                 }
             }
         }
+        
+    
     }
     
     post {
         always {
             // Nettoyage des images Docker locales pour économiser l'espace
             sh "docker rmi ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} || true"
+            sh "docker rmi 34.239.182.154/nexus/repository/hub.aceternity/${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} || true"
         }
     }
 }
