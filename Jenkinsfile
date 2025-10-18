@@ -94,32 +94,18 @@ pipeline {
             }
         }
         
-        stage('Package & Archive') {
-            steps {
-                script {
-                    // Créer le répertoire de packaging
-                    sh "mkdir -p target/packaging"
-                    
-                    // Copier le JAR dans le répertoire de packaging
-                    sh "cp target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.jar target/packaging/"
-                    
-                    // Créer l'archive ZIP
-                    sh "cd target/packaging && zip -r ../${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ."
-                    
-                    // Archiver l'artifact pour Jenkins
-                    archiveArtifacts artifacts: "target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip", fingerprint: true
-                    
-                    echo "Package créé: ${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip"
-                }
-            }
-        }
-        
         stage('Push to Nexus Raw Repository') {
             steps {
                 script {
                     echo "Poussage du package vers Nexus Raw Repository..."
                     
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh "mkdir -p target/packaging"                        
+                        sh "cp target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.jar target/packaging/"                       
+                        sh "cd target/packaging && zip -r ../${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip ."                        
+                        archiveArtifacts artifacts: "target/${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip", fingerprint: true
+                        echo "Package créé: ${ARTIFACT_NAME}-${env.CURRENT_TAG}.zip"
+
                         def nexusResult = sh(
                             script: """
                                 curl -v -k -u \${USERNAME}:\${PASSWORD} \\
@@ -144,20 +130,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Construction de l'image Docker..."
                     
-                    def dockerResult = sh(
-                        script: """
-                            docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} .
-                        """,
-                        returnStatus: true
-                    )
-                    
-                    if (dockerResult != 0) {
-                        error "ÉCHEC: Construction de l'image Docker a échoué"
-                    } else {
-                        echo "SUCCÈS: Image Docker construite: ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
-                    }
                 }
             }
         }
@@ -165,9 +138,19 @@ pipeline {
         stage('Push Docker Image to Nexus') {
             steps {
                 script {
-                    echo "Poussage de l'image Docker vers Nexus ..."
-                    
                     withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        def dockerResult = sh(
+                            script: """
+                                docker build -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} -t ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG} .
+                            """,
+                            returnStatus: true
+                        )
+                        if (dockerResult != 0) {
+                            error "ÉCHEC: Construction de l'image Docker a échoué"
+                        } else {
+                            echo "SUCCÈS: Image Docker construite: ${DOCKER_IMAGE_NAME}:${env.CURRENT_TAG}"
+                        }
+                                           
                         def dockerPushResult = sh(
                             script: """
                                 # Login to Nexus with HTTPS (sécurisé)
